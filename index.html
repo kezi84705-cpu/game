@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>シューティングゲーム</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="score">スコア: 0 | ライフ: 3</div>
+        <div id="titleScreen">
+            <h1>シューティングゲーム</h1>
+            <div class="instructions">
+                <h3>操作方法</h3>
+                <p>← → または A D キー：移動</p>
+                <p>攻撃は自動で行われます</p>
+            </div>
+            <div class="enemy-info">
+                <h3>敵の種類</h3>
+                <p><span class="blue-enemy">■</span> 青い敵：攻撃しない（25点）</p>
+                <p><span class="red-enemy">■</span> 赤い敵：攻撃してくる（100点）</p>
+                <p><span class="yellow-enemy">■</span> 黄色の敵：3方向攻撃（300点）※スコア500以上で出現</p>
+                <p><span class="pink-enemy">■</span> ピンクの敵：5方向攻撃（500点）※スコア1500以上で出現</p>
+                <p><span class="silver-enemy">■</span> 銀色の敵：攻撃しない（1000点）※レア1%</p>
+            </div>
+            <div class="item-info">
+                <h3>アイテム</h3>
+                <p>🍙 おにぎり：ライフ3回復（5秒に1度出現）</p>
+                <p style="font-size: 14px; color: #aaa;">※スコア1000以上でライフ5回復</p>
+            </div>
+            <button id="startBtn">ゲームスタート</button>
+        </div>
+        <div id="gameOver" class="hidden">
+            <h2>ゲームオーバー</h2>
+            <p id="congratsMessage" class="hidden" style="font-size: 32px; color: #ffd700; margin-bottom: 20px; font-weight: bold;">🎉 おめでとう！ 🎉</p>
+            <p>最終スコア: <span id="finalScore">0</span></p>
+            <div class="game-stats">
+                <p>お疲れ様でした！</p>
+            </div>
+            <div id="ranking" class="ranking">
+                <h3>ランキング TOP5</h3>
+                <ol id="rankingList"></ol>
+            </div>
+            <button id="restartBtn">もう一度プレイ</button>
+        </div>
+        <canvas id="confettiCanvas"></canvas>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
