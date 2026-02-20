@@ -229,6 +229,44 @@ document.addEventListener('keyup', (e) => {
 restartBtn.addEventListener('click', restartGame);
 startBtn.addEventListener('click', startGame);
 
+// タッチ操作対応
+let touchStartX = 0;
+let isTouching = false;
+
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (!gameState.running) return;
+    isTouching = true;
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    touchStartX = touch.clientX - rect.left;
+    updatePlayerPositionFromTouch(touchStartX, rect.width);
+});
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (!gameState.running || !isTouching) return;
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const touchX = touch.clientX - rect.left;
+    updatePlayerPositionFromTouch(touchX, rect.width);
+});
+
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    isTouching = false;
+});
+
+function updatePlayerPositionFromTouch(touchX, canvasDisplayWidth) {
+    // タッチ位置をキャンバスの実際の座標に変換
+    const scaleX = canvas.width / canvasDisplayWidth;
+    const targetX = touchX * scaleX;
+    
+    // プレイヤーを中心に配置
+    player.x = targetX - player.width / 2;
+    player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
+}
+
 function startGame() {
     titleScreenElement.classList.add('hidden');
     gameState.running = true;
@@ -251,8 +289,11 @@ function spawnEnemy() {
     
     let enemyType;
     
-    // 1%の確率で銀色の敵（レア）
-    if (Math.random() < 0.01) {
+    // スコア10000以上で星型の敵（ボス）が確定出現
+    if (gameState.score >= 10000 && !enemies.some(e => e.type === 'star')) {
+        enemyType = 'star';
+    } else if (Math.random() < 0.001) {
+        // 0.1%の確率で銀色の敵（超レア）
         enemyType = 'silver';
     } else if (gameState.score >= 1500 && Math.random() < 0.15) {
         // 15%の確率でピンクの敵（5方向攻撃）
@@ -265,12 +306,16 @@ function spawnEnemy() {
         enemyType = Math.random() < 0.5 ? 'red' : 'blue';
     }
     
+    // 星型の敵は大きめに
+    const starWidth = enemyType === 'star' ? 60 : width;
+    const starHeight = enemyType === 'star' ? 60 : height;
+    
     enemies.push({
-        x: Math.random() * (canvas.width - width),
-        y: -height,
-        width: width,
-        height: height,
-        speed: enemySpeed + Math.random() * 0.5,
+        x: Math.random() * (canvas.width - starWidth),
+        y: -starHeight,
+        width: starWidth,
+        height: starHeight,
+        speed: enemyType === 'star' ? enemySpeed * 0.5 : enemySpeed + Math.random() * 0.5,
         shootTimer: Math.floor(Math.random() * 60) + 30,
         canShoot: enemyType !== 'blue' && enemyType !== 'silver',
         type: enemyType
@@ -326,7 +371,20 @@ function drawOnigiri() {
 }
 
 function enemyShoot(enemy) {
-    if (enemy.type === 'pink') {
+    if (enemy.type === 'star') {
+        // 星型の敵は12方向に弾を撃つ
+        for (let i = 0; i < 12; i++) {
+            const angle = (Math.PI * 2 / 12) * i;
+            enemyBullets.push({
+                x: enemy.x + enemy.width / 2 - 3,
+                y: enemy.y + enemy.height / 2,
+                width: 6,
+                height: 12,
+                vx: Math.cos(angle) * 3,
+                vy: Math.sin(angle) * 3
+            });
+        }
+    } else if (enemy.type === 'pink') {
         // ピンクの敵は5方向に弾を撃つ
         const angles = [-0.5, -0.25, 0, 0.25, 0.5]; // 左2、左1、中央、右1、右2
         angles.forEach(angle => {
@@ -448,7 +506,9 @@ function checkBulletCollisions() {
                 // 敵のタイプによってスコアを変える
                 let points;
                 if (enemies[i].type === 'silver') {
-                    points = 1000; // 銀色の敵は1000点
+                    points = 20000; // 銀色の敵は20000点
+                } else if (enemies[i].type === 'star') {
+                    points = 5000; // 星型の敵（ボス）は5000点
                 } else if (enemies[i].type === 'pink') {
                     points = 500; // ピンクの敵は500点
                 } else if (enemies[i].type === 'yellow') {
@@ -502,7 +562,10 @@ function drawEnemies() {
     enemies.forEach(enemy => {
         // 敵のタイプによって色を変える
         let mainColor, darkColor;
-        if (enemy.type === 'silver') {
+        if (enemy.type === 'star') {
+            mainColor = '#ffd700';
+            darkColor = '#ffaa00';
+        } else if (enemy.type === 'silver') {
             mainColor = '#c0c0c0';
             darkColor = '#808080';
         } else if (enemy.type === 'pink') {
@@ -519,25 +582,60 @@ function drawEnemies() {
             darkColor = '#005599';
         }
         
-        ctx.fillStyle = mainColor;
-        
-        // 機体
-        ctx.beginPath();
-        ctx.moveTo(enemy.x + enemy.width / 2, enemy.y + enemy.height);
-        ctx.lineTo(enemy.x + enemy.width * 0.3, enemy.y + enemy.height * 0.4);
-        ctx.lineTo(enemy.x + enemy.width * 0.7, enemy.y + enemy.height * 0.4);
-        ctx.closePath();
-        ctx.fill();
-        
-        // 主翼
-        ctx.fillRect(enemy.x, enemy.y + enemy.height * 0.5, enemy.width, enemy.height * 0.15);
-        
-        // コックピット
-        ctx.fillStyle = darkColor;
-        ctx.beginPath();
-        ctx.arc(enemy.x + enemy.width / 2, enemy.y + enemy.height * 0.6, enemy.width * 0.15, 0, Math.PI * 2);
-        ctx.fill();
+        // 星型の敵は特別な描画
+        if (enemy.type === 'star') {
+            drawStar(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 5, enemy.width / 2, enemy.width / 4, mainColor);
+        } else {
+            ctx.fillStyle = mainColor;
+            
+            // 機体
+            ctx.beginPath();
+            ctx.moveTo(enemy.x + enemy.width / 2, enemy.y + enemy.height);
+            ctx.lineTo(enemy.x + enemy.width * 0.3, enemy.y + enemy.height * 0.4);
+            ctx.lineTo(enemy.x + enemy.width * 0.7, enemy.y + enemy.height * 0.4);
+            ctx.closePath();
+            ctx.fill();
+            
+            // 主翼
+            ctx.fillRect(enemy.x, enemy.y + enemy.height * 0.5, enemy.width, enemy.height * 0.15);
+            
+            // コックピット
+            ctx.fillStyle = darkColor;
+            ctx.beginPath();
+            ctx.arc(enemy.x + enemy.width / 2, enemy.y + enemy.height * 0.6, enemy.width * 0.15, 0, Math.PI * 2);
+            ctx.fill();
+        }
     });
+}
+
+function drawStar(cx, cy, spikes, outerRadius, innerRadius, color) {
+    let rot = Math.PI / 2 * 3;
+    let x = cx;
+    let y = cy;
+    const step = Math.PI / spikes;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - outerRadius);
+    
+    for (let i = 0; i < spikes; i++) {
+        x = cx + Math.cos(rot) * outerRadius;
+        y = cy + Math.sin(rot) * outerRadius;
+        ctx.lineTo(x, y);
+        rot += step;
+
+        x = cx + Math.cos(rot) * innerRadius;
+        y = cy + Math.sin(rot) * innerRadius;
+        ctx.lineTo(x, y);
+        rot += step;
+    }
+    
+    ctx.lineTo(cx, cy - outerRadius);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = '#ffaa00';
+    ctx.lineWidth = 2;
+    ctx.stroke();
 }
 
 function drawEnemyBullets() {
