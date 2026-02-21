@@ -318,7 +318,9 @@ function spawnEnemy() {
         speed: enemyType === 'star' ? enemySpeed * 0.5 : enemySpeed + Math.random() * 0.5,
         shootTimer: Math.floor(Math.random() * 60) + 30,
         canShoot: enemyType !== 'blue' && enemyType !== 'silver',
-        type: enemyType
+        type: enemyType,
+        hp: enemyType === 'star' ? 3 : 1,
+        maxHp: enemyType === 'star' ? 3 : 1
     });
 }
 
@@ -503,25 +505,32 @@ function checkBulletCollisions() {
     bullets = bullets.filter(bullet => {
         for (let i = 0; i < enemies.length; i++) {
             if (checkCollision(bullet, enemies[i])) {
-                // 敵のタイプによってスコアを変える
-                let points;
-                if (enemies[i].type === 'silver') {
-                    points = 20000; // 銀色の敵は20000点
-                } else if (enemies[i].type === 'star') {
-                    points = 5000; // 星型の敵（ボス）は5000点
-                } else if (enemies[i].type === 'pink') {
-                    points = 500; // ピンクの敵は500点
-                } else if (enemies[i].type === 'yellow') {
-                    points = 300; // 黄色の敵は300点
-                } else if (enemies[i].type === 'red') {
-                    points = 100; // 赤い敵は100点
-                } else {
-                    points = 25; // 青い敵は25点
+                // 敵にダメージを与える
+                enemies[i].hp--;
+                
+                // HPが0になったら倒す
+                if (enemies[i].hp <= 0) {
+                    // 敵のタイプによってスコアを変える
+                    let points;
+                    if (enemies[i].type === 'silver') {
+                        points = 20000; // 銀色の敵は20000点
+                    } else if (enemies[i].type === 'star') {
+                        points = 5000; // 星型の敵（ボス）は5000点
+                    } else if (enemies[i].type === 'pink') {
+                        points = 500; // ピンクの敵は500点
+                    } else if (enemies[i].type === 'yellow') {
+                        points = 300; // 黄色の敵は300点
+                    } else if (enemies[i].type === 'red') {
+                        points = 100; // 赤い敵は100点
+                    } else {
+                        points = 25; // 青い敵は25点
+                    }
+                    
+                    gameState.score += points;
+                    enemies.splice(i, 1);
+                    updateLivesDisplay();
                 }
                 
-                gameState.score += points;
-                enemies.splice(i, 1);
-                updateLivesDisplay();
                 playSound('hit');
                 return false;
             }
@@ -585,6 +594,26 @@ function drawEnemies() {
         // 星型の敵は特別な描画
         if (enemy.type === 'star') {
             drawStar(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 5, enemy.width / 2, enemy.width / 4, mainColor);
+            
+            // HPバーを表示
+            const barWidth = enemy.width;
+            const barHeight = 5;
+            const barX = enemy.x;
+            const barY = enemy.y - 10;
+            
+            // 背景（赤）
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(barX, barY, barWidth, barHeight);
+            
+            // HP（緑）
+            ctx.fillStyle = '#00ff00';
+            const hpWidth = (enemy.hp / enemy.maxHp) * barWidth;
+            ctx.fillRect(barX, barY, hpWidth, barHeight);
+            
+            // 枠線
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(barX, barY, barWidth, barHeight);
         } else {
             ctx.fillStyle = mainColor;
             
