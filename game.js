@@ -220,6 +220,12 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault();
         shootBullet();
     }
+    // 裏技：Hキーでライフ3回復
+    if (e.key === 'h' && gameState.running) {
+        gameState.lives = Math.min(gameState.lives + 3, 5);
+        updateLivesDisplay();
+        playSound('powerup');
+    }
 });
 
 document.addEventListener('keyup', (e) => {
@@ -289,8 +295,11 @@ function spawnEnemy() {
     
     let enemyType;
     
-    // スコア10000以上で星型の敵（ボス）が確定出現
-    if (gameState.score >= 10000 && !enemies.some(e => e.type === 'star')) {
+    // スコア25000以上でスペード型の敵（超ボス）が確定出現
+    if (gameState.score >= 25000 && !enemies.some(e => e.type === 'spade')) {
+        enemyType = 'spade';
+    } else if (gameState.score >= 10000 && !enemies.some(e => e.type === 'star')) {
+        // スコア10000以上で星型の敵（ボス）が確定出現
         enemyType = 'star';
     } else if (Math.random() < 0.001) {
         // 0.1%の確率で銀色の敵（超レア）
@@ -306,21 +315,28 @@ function spawnEnemy() {
         enemyType = Math.random() < 0.5 ? 'red' : 'blue';
     }
     
-    // 星型の敵は大きめに
-    const starWidth = enemyType === 'star' ? 60 : width;
-    const starHeight = enemyType === 'star' ? 60 : height;
+    // ボス系の敵は大きめに
+    let enemyWidth = width;
+    let enemyHeight = height;
+    if (enemyType === 'spade') {
+        enemyWidth = 70;
+        enemyHeight = 70;
+    } else if (enemyType === 'star') {
+        enemyWidth = 60;
+        enemyHeight = 60;
+    }
     
     enemies.push({
-        x: Math.random() * (canvas.width - starWidth),
-        y: -starHeight,
-        width: starWidth,
-        height: starHeight,
-        speed: enemyType === 'star' ? enemySpeed * 0.5 : enemySpeed + Math.random() * 0.5,
+        x: Math.random() * (canvas.width - enemyWidth),
+        y: -enemyHeight,
+        width: enemyWidth,
+        height: enemyHeight,
+        speed: (enemyType === 'star' || enemyType === 'spade') ? enemySpeed * 0.5 : enemySpeed + Math.random() * 0.5,
         shootTimer: Math.floor(Math.random() * 60) + 30,
         canShoot: enemyType !== 'blue' && enemyType !== 'silver',
         type: enemyType,
-        hp: enemyType === 'star' ? 3 : 1,
-        maxHp: enemyType === 'star' ? 3 : 1
+        hp: enemyType === 'spade' ? 5 : (enemyType === 'star' ? 3 : 1),
+        maxHp: enemyType === 'spade' ? 5 : (enemyType === 'star' ? 3 : 1)
     });
 }
 
@@ -343,8 +359,8 @@ function updateOnigiri() {
         }
         
         if (checkCollision(player, item)) {
-            // スコアが1000以上の場合は5回復、それ以外は3回復
-            const healAmount = gameState.score >= 1000 ? 5 : 3;
+            // スコアが1000以上の場合は1回復、それ以外は3回復
+            const healAmount = gameState.score >= 1000 ? 1 : 3;
             gameState.lives = Math.min(gameState.lives + healAmount, 5);
             updateLivesDisplay();
             playSound('powerup');
@@ -373,7 +389,20 @@ function drawOnigiri() {
 }
 
 function enemyShoot(enemy) {
-    if (enemy.type === 'star') {
+    if (enemy.type === 'spade') {
+        // スペード型の敵は20方向に弾を撃つ
+        for (let i = 0; i < 20; i++) {
+            const angle = (Math.PI * 2 / 20) * i;
+            enemyBullets.push({
+                x: enemy.x + enemy.width / 2 - 3,
+                y: enemy.y + enemy.height / 2,
+                width: 6,
+                height: 12,
+                vx: Math.cos(angle) * 3.5,
+                vy: Math.sin(angle) * 3.5
+            });
+        }
+    } else if (enemy.type === 'star') {
         // 星型の敵は12方向に弾を撃つ
         for (let i = 0; i < 12; i++) {
             const angle = (Math.PI * 2 / 12) * i;
@@ -512,7 +541,9 @@ function checkBulletCollisions() {
                 if (enemies[i].hp <= 0) {
                     // 敵のタイプによってスコアを変える
                     let points;
-                    if (enemies[i].type === 'silver') {
+                    if (enemies[i].type === 'spade') {
+                        points = 10000; // スペード型の敵（超ボス）は10000点
+                    } else if (enemies[i].type === 'silver') {
                         points = 20000; // 銀色の敵は20000点
                     } else if (enemies[i].type === 'star') {
                         points = 5000; // 星型の敵（ボス）は5000点
@@ -571,7 +602,10 @@ function drawEnemies() {
     enemies.forEach(enemy => {
         // 敵のタイプによって色を変える
         let mainColor, darkColor;
-        if (enemy.type === 'star') {
+        if (enemy.type === 'spade') {
+            mainColor = '#000000';
+            darkColor = '#333333';
+        } else if (enemy.type === 'star') {
             mainColor = '#ffd700';
             darkColor = '#ffaa00';
         } else if (enemy.type === 'silver') {
@@ -591,8 +625,30 @@ function drawEnemies() {
             darkColor = '#005599';
         }
         
-        // 星型の敵は特別な描画
-        if (enemy.type === 'star') {
+        // スペード型の敵は特別な描画
+        if (enemy.type === 'spade') {
+            drawSpade(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemy.width / 2, mainColor);
+            
+            // HPバーを表示
+            const barWidth = enemy.width;
+            const barHeight = 5;
+            const barX = enemy.x;
+            const barY = enemy.y - 10;
+            
+            // 背景（赤）
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(barX, barY, barWidth, barHeight);
+            
+            // HP（緑）
+            ctx.fillStyle = '#00ff00';
+            const hpWidth = (enemy.hp / enemy.maxHp) * barWidth;
+            ctx.fillRect(barX, barY, hpWidth, barHeight);
+            
+            // 枠線
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(barX, barY, barWidth, barHeight);
+        } else if (enemy.type === 'star') {
             drawStar(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 5, enemy.width / 2, enemy.width / 4, mainColor);
             
             // HPバーを表示
@@ -635,6 +691,26 @@ function drawEnemies() {
             ctx.fill();
         }
     });
+}
+
+function drawSpade(cx, cy, size, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    
+    // スペードの上部（ハート型を逆さまに）
+    ctx.moveTo(cx, cy - size);
+    ctx.bezierCurveTo(cx - size * 0.5, cy - size * 1.3, cx - size * 1.2, cy - size * 0.3, cx, cy + size * 0.3);
+    ctx.bezierCurveTo(cx + size * 1.2, cy - size * 0.3, cx + size * 0.5, cy - size * 1.3, cx, cy - size);
+    ctx.closePath();
+    ctx.fill();
+    
+    // スペードの下部（茎）
+    ctx.fillRect(cx - size * 0.15, cy + size * 0.3, size * 0.3, size * 0.4);
+    
+    // 枠線
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
 }
 
 function drawStar(cx, cy, spikes, outerRadius, innerRadius, color) {
@@ -758,8 +834,10 @@ function gameLoop() {
         enemySpawnTimer = 0;
     }
     
+    // スコアに応じておにぎりの出現間隔を調整
     onigiriSpawnTimer++;
-    if (onigiriSpawnTimer >= onigiriSpawnInterval) {
+    const currentInterval = gameState.score >= 10000 ? 900 : 300; // 10000以上で15秒、それ以外は5秒
+    if (onigiriSpawnTimer >= currentInterval) {
         spawnOnigiri();
         onigiriSpawnTimer = 0;
     }
@@ -772,4 +850,3 @@ function gameLoop() {
     
     requestAnimationFrame(gameLoop);
 }
-

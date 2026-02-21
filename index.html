@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>シューティングゲーム</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="./style.css">
 </head>
 <body>
     <div id="game-container">
@@ -26,11 +26,13 @@
                 <p><span class="pink-enemy">■</span> ピンクの敵：5方向攻撃（500点）※スコア1500以上で出現</p>
                 <p><span class="silver-enemy">■</span> 銀色の敵：攻撃しない（20000点）※超レア0.1%</p>
                 <p><span class="star-enemy">★</span> 星型ボス：12方向攻撃（5000点）※スコア10000で出現</p>
+                <p><span class="spade-enemy">♠</span> スペード超ボス：20方向攻撃（10000点）※スコア25000で出現</p>
             </div>
             <div class="item-info">
                 <h3>アイテム</h3>
                 <p>🍙 おにぎり：ライフ3回復（5秒に1度出現）</p>
-                <p style="font-size: 14px; color: #aaa;">※スコア1000以上でライフ5回復</p>
+                <p style="font-size: 14px; color: #aaa;">※スコア1000以上でライフ1回復</p>
+                <p style="font-size: 14px; color: #aaa;">※スコア10000以上で15秒に1度出現</p>
             </div>
             <button id="startBtn">ゲームスタート</button>
         </div>
@@ -47,8 +49,8 @@
             </div>
             <button id="restartBtn">もう一度プレイ</button>
         </div>
-        <canvas id="confettiCanvas"></canvas>
+        <canvas id="confettiCanvas" width="800" height="600"></canvas>
     </div>
-    <script src="game.js"></script>
+    <script src="./game.js"></script>
 </body>
 </html>
